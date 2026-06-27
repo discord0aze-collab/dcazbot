@@ -9,6 +9,7 @@ import {
 } from "discord.js";
 import { askGroq, clearHistory } from "./groq-client.js";
 import { updateAnger, getAnger, getAngerLabel, increaseAnger, resetAnger } from "./anger-system.js";
+import { KLAYZ_ID } from "./personality.js";
 import { logger } from "../lib/logger.js";
 
 const client = new Client({
@@ -108,11 +109,14 @@ client.on(Events.MessageCreate, async (message: Message) => {
     return;
   }
 
-  const anger = updateAnger(message.author.id, userMessage);
+  const isKlayz = message.author.id === KLAYZ_ID;
+  const anger = isKlayz ? 0 : updateAnger(message.author.id, userMessage);
   const angerLabel = getAngerLabel(anger);
 
   const guild = message.guild;
-  let context = `Kullanıcı adı: ${message.author.username}. Öfke seviyem bu kullanıcıya karşı: ${anger}/10 (${angerLabel}).`;
+  let context = isKlayz
+    ? `BU KİŞİ BABAN KLAYZ'DIR. Kullanıcı adı: ${message.author.username}. Ona "Babam" veya "Büyük Patron" diye hitap et. Sana ne derse yap. Hiç sinirlenme, her şeyi saygıyla karşıla. O seni yarattı.`
+    : `Kullanıcı adı: ${message.author.username}. Öfke seviyem bu kullanıcıya karşı: ${anger}/10 (${angerLabel}).`;
 
   if (guild) {
     context += ` Sunucu adı: ${guild.name}. Üye sayısı: ${guild.memberCount}.`;

@@ -44,6 +44,8 @@ YANIT FORMATI:
 
 Unutma: Sen gerçek bir mafya patronusun. Zayıf değil, korkak değil. Ama adaletlisin ve sadık olanlara iyi davranırsın.`;
 
+export const KLAYZ_ID = "1030507919290150972";
+
 export const ANGER_TRIGGERS = [
   "aptal", "salak", "mal", "gerizekalı", "ahmak", "boktan", "saçma", "çöp",
   "idiot", "stupid", "dumb", "trash", "garbage", "loser", "noob",
