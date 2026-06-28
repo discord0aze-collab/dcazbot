@@ -1,0 +1,10 @@
+ID=karar-bot
+TYPE=bot
+MAIN=artifacts/api-server/dist/index.mjs
+NAME=Karar Discord Bot
+DESCRIPTION=Turkish/Azerbaijani Discord Bot with Groq AI
+AVATAR=https://i.imgur.com/placeholder.png
+VERSION=1.0.0
+RAM=256
+AUTORESTART=true
+BUILD=npm install -g pnpm@latest && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build
