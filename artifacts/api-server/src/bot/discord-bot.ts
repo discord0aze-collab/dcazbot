@@ -178,7 +178,7 @@ client.once(Events.ClientReady, async (c) => {
   logger.info({ tag: c.user.tag }, "Discord bot bağlandı");
   c.user.setPresence({
     status: "online",
-    activities: [{ name: "/yardim", type: 3 }],
+    activities: [{ name: "Karar veriyorum.", type: 3 }],
   });
   const token = process.env["DISCORD_BOT_TOKEN"]!;
   await registerCommands(c.user.id, token);
