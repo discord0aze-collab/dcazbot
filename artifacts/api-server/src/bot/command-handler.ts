@@ -3,7 +3,8 @@ import {
   EmbedBuilder,
   GuildMember,
 } from "discord.js";
-import { askGroq } from "./groq-client.js";
+import { askGroq, clearHistory } from "./groq-client.js";
+import { resetProfile, getProfile, getSempatiLabel } from "./user-memory.js";
 import { logger } from "../lib/logger.js";
 
 async function groqReply(
@@ -235,6 +236,14 @@ export async function handleCommand(interaction: ChatInputCommandInteraction): P
         break;
       }
 
+      case "temizle": {
+        const hedef = interaction.options.getUser("kullanici", true);
+        resetProfile(hedef.id);
+        clearHistory(hedef.id);
+        await interaction.reply({ content: `**${hedef.username}** — hafıza sıfırlandı. Bot onu ilk kez görüyor gibi davranacak.`, ephemeral: true });
+        break;
+      }
+
       case "sinir": {
         const hedef = interaction.options.getUser("kullanici", true);
         const sebep = interaction.options.getString("sebep");
@@ -269,7 +278,7 @@ export async function handleCommand(interaction: ChatInputCommandInteraction): P
             { name: "🤖 Yapay Zeka", value: "`/sor` `/ozetle` `/cevir` `/analiz` `/fikir` `/karar` `/strateji` `/tartis` `/trivia`" },
             { name: "✍️ Yazı & İçerik", value: "`/yeniden-yaz` `/siir` `/slogan` `/eposta` `/ozgecmis`" },
             { name: "💻 Kod", value: "`/kod` `/hata-bul`" },
-            { name: "🎭 Eğlence", value: "`/roast` `/zar` `/sec` `/sinir`" },
+            { name: "🎭 Eğlence", value: "`/roast` `/zar` `/sec` `/sinir` `/temizle`" },
             { name: "📋 Kelime", value: "`/kelime` `/matematik`" },
             { name: "📊 Sunucu", value: "`/sunucu-bilgi` `/kullanici-bilgi` `/anket`" },
           )

@@ -142,4 +142,9 @@ export const commands = [
     .setDescription("Seçilen kullanıcıya DM ile soğuk bir uyarı gönderir.")
     .addUserOption((o) => o.setName("kullanici").setDescription("Uyarılacak kullanıcı").setRequired(true))
     .addStringOption((o) => o.setName("sebep").setDescription("Uyarı sebebi (isteğe bağlı)").setRequired(false)),
+
+  new SlashCommandBuilder()
+    .setName("temizle")
+    .setDescription("Bir kullanıcının tüm hafıza ve geçmişini siler. Bot onu yeni tanıyor gibi davranır.")
+    .addUserOption((o) => o.setName("kullanici").setDescription("Geçmişi silinecek kullanıcı").setRequired(true)),
 ].map((cmd) => cmd.toJSON());

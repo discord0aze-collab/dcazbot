@@ -22,6 +22,14 @@ import {
   getViolationCount,
   resetViolations,
 } from "./moderation.js";
+import {
+  getProfile,
+  recordMessage,
+  recordViolation,
+  buildMemoryContext,
+  changeSempati,
+  resetProfile,
+} from "./user-memory.js";
 import { logger } from "../lib/logger.js";
 
 const client = new Client({
@@ -197,9 +205,14 @@ client.on(Events.MessageCreate, async (message: Message) => {
 
   const isKlayz = message.author.id === KLAYZ_ID;
 
+  recordMessage(message.author.id, message.author.username);
+
   if (!isKlayz && message.guild) {
     const blocked = await handleModeration(message);
-    if (blocked) return;
+    if (blocked) {
+      recordViolation(message.author.id);
+      return;
+    }
   }
 
   const isMentioned = message.mentions.has(client.user!);
@@ -218,21 +231,22 @@ client.on(Events.MessageCreate, async (message: Message) => {
   }
 
   if (!userMessage) {
-    await message.reply("Ne istiyorsun?");
+    await message.reply("Ne istiyorsun.");
     return;
   }
 
   const anger = isKlayz ? 0 : updateAnger(message.author.id, userMessage);
   const angerLabel = getAngerLabel(anger);
 
-  let context = isKlayz
-    ? `Bu kişi seni yaratan Klayz'dır. Kullanıcı adı: ${message.author.username}.`
-    : `Kullanıcı: ${message.author.username}. Öfke seviyesi: ${anger}/10. İhlal sayısı: ${getViolationCount(message.author.id)}.`;
-
-  if (message.guild) context += ` Sunucu: ${message.guild.name}.`;
-  if (!isKlayz) {
-    if (angerLabel === "warning") context += " Kullanıcıyı sert ama kontrollü uyar.";
-    if (angerLabel === "furious") context += " Kullanıcıya çok sert çık, ceza vereceğini belirt.";
+  let context: string;
+  if (isKlayz) {
+    context = `Bu kişi seni yaratan Klayz'dır. Kullanıcı adı: ${message.author.username}.`;
+  } else {
+    const memoryContext = buildMemoryContext(message.author.id);
+    context = memoryContext || `Kullanıcı adı: ${message.author.username}.`;
+    if (message.guild) context += ` Sunucu: ${message.guild.name}.`;
+    if (angerLabel === "warning") context += " Bu kullanıcı seni sinir etmeye başladı. Daha da soğu ve kısa kes.";
+    if (angerLabel === "furious") context += " Bu kullanıcı sabrını tamamen tüketti. Minimum kelime, maksimum mesafe.";
   }
 
   try {
