@@ -6,10 +6,15 @@ import {
   Guild,
   TextChannel,
   ChannelType,
+  ChatInputCommandInteraction,
+  REST,
+  Routes,
 } from "discord.js";
-import { askGroq, clearHistory } from "./groq-client.js";
-import { updateAnger, getAnger, getAngerLabel, increaseAnger, resetAnger } from "./anger-system.js";
+import { askGroq } from "./groq-client.js";
+import { updateAnger, getAngerLabel, resetAnger } from "./anger-system.js";
 import { KLAYZ_ID } from "./personality.js";
+import { commands } from "./commands.js";
+import { handleCommand } from "./command-handler.js";
 import { logger } from "../lib/logger.js";
 
 const client = new Client({
@@ -22,14 +27,13 @@ const client = new Client({
   ],
 });
 
-async function executeAngerAction(message: Message, anger: number): Promise<void> {
-  const guild = message.guild;
-  if (!guild) return;
-
-  const label = getAngerLabel(anger);
-
-  if (label === "furious" && anger >= 9) {
-    await executeDestructiveAction(message, guild, anger);
+async function registerCommands(clientId: string, token: string): Promise<void> {
+  const rest = new REST().setToken(token);
+  try {
+    await rest.put(Routes.applicationCommands(clientId), { body: commands });
+    logger.info({ count: commands.length }, "Slash komutları kaydedildi");
+  } catch (err) {
+    logger.error({ err }, "Slash komut kaydı başarısız");
   }
 }
 
@@ -46,14 +50,11 @@ async function executeDestructiveAction(message: Message, guild: Guild, anger: n
           ch.name !== "general" &&
           ch.name !== "genel"
       );
-
       const targetChannel = channels.first();
       if (targetChannel && botMember.permissions.has("ManageChannels")) {
         const chName = targetChannel.name;
-        await targetChannel.delete("Patron sinirlendiği için silindi.");
-        await message.channel.send(
-          `**#${chName}** kanalını sildim. Sabrımı taşırdın, evladım. Bir daha olursa başka şeyler de gider.`
-        );
+        await targetChannel.delete("Bot sinirlendiği için silindi.");
+        await message.channel.send(`**#${chName}** kanalı silindi.`);
         resetAnger(message.author.id);
         return;
       }
@@ -62,12 +63,9 @@ async function executeDestructiveAction(message: Message, guild: Guild, anger: n
     if (anger >= 9 && botMember.permissions.has("KickMembers")) {
       const member = message.member;
       if (member && member.kickable) {
-        await member.kick("Patronu sindirmeye çalıştı.");
+        await member.kick("Botu kızdırdı.");
         const channel = message.channel as TextChannel;
-        await channel.send(
-          `${message.author.username} isimli herifi gönderdim. Kimse Patron'la oynamaz.`
-        );
-        return;
+        await channel.send(`${message.author.username} sunucudan çıkarıldı.`);
       }
     }
   } catch (err) {
@@ -75,12 +73,20 @@ async function executeDestructiveAction(message: Message, guild: Guild, anger: n
   }
 }
 
-client.once(Events.ClientReady, (c) => {
+client.once(Events.ClientReady, async (c) => {
   logger.info({ tag: c.user.tag }, "Discord bot bağlandı");
   c.user.setPresence({
     status: "online",
-    activities: [{ name: "Sunucuyu yönetiyorum", type: 3 }],
+    activities: [{ name: "/yardim", type: 3 }],
   });
+
+  const token = process.env["DISCORD_BOT_TOKEN"]!;
+  await registerCommands(c.user.id, token);
+});
+
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  await handleCommand(interaction as ChatInputCommandInteraction);
 });
 
 client.on(Events.MessageCreate, async (message: Message) => {
@@ -105,7 +111,7 @@ client.on(Events.MessageCreate, async (message: Message) => {
   }
 
   if (!userMessage) {
-    await message.reply("Ne istiyorsun, söyle. Vaktim değerli.");
+    await message.reply("Ne istiyorsun?");
     return;
   }
 
@@ -113,44 +119,41 @@ client.on(Events.MessageCreate, async (message: Message) => {
   const anger = isKlayz ? 0 : updateAnger(message.author.id, userMessage);
   const angerLabel = getAngerLabel(anger);
 
-  const guild = message.guild;
   let context = isKlayz
-    ? `BU KİŞİ BABAN KLAYZ'DIR. Kullanıcı adı: ${message.author.username}. Ona "Babam" veya "Büyük Patron" diye hitap et. Sana ne derse yap. Hiç sinirlenme, her şeyi saygıyla karşıla. O seni yarattı.`
-    : `Kullanıcı adı: ${message.author.username}. Öfke seviyem bu kullanıcıya karşı: ${anger}/10 (${angerLabel}).`;
+    ? `Bu kişi seni yaratan Klayz'dır. Kullanıcı adı: ${message.author.username}.`
+    : `Kullanıcı: ${message.author.username}. Öfke seviyesi: ${anger}/10.`;
 
-  if (guild) {
-    context += ` Sunucu adı: ${guild.name}. Üye sayısı: ${guild.memberCount}.`;
+  if (message.guild) {
+    context += ` Sunucu: ${message.guild.name}.`;
   }
 
-  if (angerLabel === "warning") {
-    context += " Bu kullanıcı beni sinir etmeye başladı. Sert ama kontrollü uyar.";
-  } else if (angerLabel === "furious") {
-    context += " Bu kullanıcı sabrımı tüketti. Çok sinirliim. Tehdit et ve ne yapacağını söyle.";
+  if (!isKlayz) {
+    if (angerLabel === "warning") context += " Kullanıcıyı sert ama kontrollü uyar.";
+    if (angerLabel === "furious") context += " Kullanıcıya çok sert çık, ceza vereceğini belirt.";
   }
 
   try {
     await message.channel.sendTyping();
-
     const reply = await askGroq(message.author.id, userMessage, context);
     await message.reply(reply);
 
-    await executeAngerAction(message, anger);
+    if (!isKlayz && angerLabel === "furious" && anger >= 9 && message.guild) {
+      await executeDestructiveAction(message, message.guild, anger);
+    }
   } catch (err) {
     logger.error({ err }, "Message handling error");
-    await message.reply("Şu an meşgulüm. Sonra gel.").catch(() => {});
+    await message.reply("Hata oluştu.").catch(() => {});
   }
 });
 
 client.on(Events.GuildMemberAdd, async (member) => {
-  const guild = member.guild;
-  const systemChannel = guild.systemChannel;
+  const systemChannel = member.guild.systemChannel;
   if (!systemChannel) return;
-
   try {
     const greeting = await askGroq(
       member.id,
-      `Yeni bir üye geldi: ${member.user.username}. Onu karşıla.`,
-      "Yeni üye karşılama mesajı yaz. Kısa ve etkileyici olsun."
+      `Yeni üye: ${member.user.username}. Kısa bir karşılama yaz.`,
+      "Soğuk ve kısa karşılama mesajı."
     );
     await systemChannel.send(greeting);
   } catch (err) {
@@ -161,10 +164,9 @@ client.on(Events.GuildMemberAdd, async (member) => {
 export function startBot(): void {
   const token = process.env["DISCORD_BOT_TOKEN"];
   if (!token) {
-    logger.error("DISCORD_BOT_TOKEN bulunamadı, bot başlatılmıyor");
+    logger.error("DISCORD_BOT_TOKEN bulunamadı");
     return;
   }
-
   client.login(token).catch((err) => {
     logger.error({ err }, "Discord bot login failed");
   });
