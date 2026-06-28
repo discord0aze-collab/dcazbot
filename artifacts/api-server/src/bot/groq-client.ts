@@ -2,9 +2,7 @@ import Groq from "groq-sdk";
 import { SYSTEM_PROMPT } from "./personality.js";
 import { logger } from "../lib/logger.js";
 
-const groq = new Groq({
-  apiKey: process.env["GROQ_API_KEY"],
-});
+const groq = new Groq({ apiKey: process.env["GROQ_API_KEY"] });
 
 const MODEL = "llama-3.3-70b-versatile";
 
@@ -22,13 +20,14 @@ export async function askGroq(
 ): Promise<string> {
   const history = conversationHistory.get(userId) ?? [];
 
-  const systemContent = extraContext
-    ? `${SYSTEM_PROMPT}\n\nBAĞLAM: ${extraContext}`
-    : SYSTEM_PROMPT;
+  const systemContent = [
+    SYSTEM_PROMPT,
+    extraContext ? `\nBAĞLAM: ${extraContext}` : "",
+  ].join("");
 
   history.push({ role: "user", content: userMessage });
 
-  if (history.length > 20) {
+  if (history.length > 30) {
     history.splice(0, 2);
   }
 
@@ -39,18 +38,20 @@ export async function askGroq(
         { role: "system", content: systemContent },
         ...history,
       ],
-      max_tokens: 400,
-      temperature: 0.85,
+      max_tokens: 600,
+      temperature: 0.7,
+      top_p: 0.9,
+      frequency_penalty: 0.3,
     });
 
-    const reply = response.choices[0]?.message?.content ?? "...";
+    const reply = response.choices[0]?.message?.content?.trim() ?? "...";
     history.push({ role: "assistant", content: reply });
     conversationHistory.set(userId, history);
 
     return reply;
   } catch (err) {
     logger.error({ err }, "Groq API error");
-    return "Şu an konuşmak istemiyorum. Sonra gel.";
+    return "Hata oluştu.";
   }
 }
 
