@@ -1,5 +1,4 @@
-[app]
-name = "karar-discord-bot"
+app = "karar-discord-bot"
 primary_region = "ams"
 
 [build]
