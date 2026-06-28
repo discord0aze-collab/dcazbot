@@ -237,6 +237,10 @@ export async function handleCommand(interaction: ChatInputCommandInteraction): P
       }
 
       case "temizle": {
+        if (user.id !== "1030507919290150972") {
+          await interaction.reply({ content: "Bu komutu kullanma yetkin yok.", ephemeral: true });
+          break;
+        }
         const hedef = interaction.options.getUser("kullanici", true);
         resetProfile(hedef.id);
         clearHistory(hedef.id);
