@@ -235,6 +235,32 @@ export async function handleCommand(interaction: ChatInputCommandInteraction): P
         break;
       }
 
+      case "sinir": {
+        const hedef = interaction.options.getUser("kullanici", true);
+        const sebep = interaction.options.getString("sebep");
+
+        if (hedef.bot) {
+          await interaction.reply({ content: "Bota DM gönderilemez.", ephemeral: true });
+          break;
+        }
+
+        await interaction.deferReply({ ephemeral: true });
+
+        const prompt = sebep
+          ? `Bir Discord kullanıcısına DM at. Konu: "${sebep}". Bunu bir daha yapmamasını söyle. Soğuk, kısa, net. Tehdit değil ama ciddi.`
+          : `Bir Discord kullanıcısına DM at. Genel olarak davranışlarından memnun olmadığını belirt, bir daha bu tür şeyler yazmamasını söyle. Soğuk, kısa, net.`;
+
+        const mesaj = await askGroq("dm_sinir_" + user.id, prompt, "DM mesajı yazıyorsun. Maksimum 3 cümle. Selamlama ve imza ekleme.");
+
+        try {
+          await hedef.send(mesaj);
+          await interaction.editReply(`DM gönderildi → **${hedef.username}**`);
+        } catch {
+          await interaction.editReply(`${hedef.username} adlı kullanıcının DM'i kapalı, mesaj gönderilemedi.`);
+        }
+        break;
+      }
+
       case "yardim": {
         const embed = new EmbedBuilder()
           .setTitle("Komut Listesi")
@@ -243,7 +269,7 @@ export async function handleCommand(interaction: ChatInputCommandInteraction): P
             { name: "🤖 Yapay Zeka", value: "`/sor` `/ozetle` `/cevir` `/analiz` `/fikir` `/karar` `/strateji` `/tartis` `/trivia`" },
             { name: "✍️ Yazı & İçerik", value: "`/yeniden-yaz` `/siir` `/slogan` `/eposta` `/ozgecmis`" },
             { name: "💻 Kod", value: "`/kod` `/hata-bul`" },
-            { name: "🎭 Eğlence", value: "`/roast` `/zar` `/sec`" },
+            { name: "🎭 Eğlence", value: "`/roast` `/zar` `/sec` `/sinir`" },
             { name: "📋 Kelime", value: "`/kelime` `/matematik`" },
             { name: "📊 Sunucu", value: "`/sunucu-bilgi` `/kullanici-bilgi` `/anket`" },
           )

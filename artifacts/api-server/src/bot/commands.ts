@@ -136,4 +136,10 @@ export const commands = [
   new SlashCommandBuilder()
     .setName("yardim")
     .setDescription("Tüm komutların listesini gösterir."),
+
+  new SlashCommandBuilder()
+    .setName("sinir")
+    .setDescription("Seçilen kullanıcıya DM ile soğuk bir uyarı gönderir.")
+    .addUserOption((o) => o.setName("kullanici").setDescription("Uyarılacak kullanıcı").setRequired(true))
+    .addStringOption((o) => o.setName("sebep").setDescription("Uyarı sebebi (isteğe bağlı)").setRequired(false)),
 ].map((cmd) => cmd.toJSON());
